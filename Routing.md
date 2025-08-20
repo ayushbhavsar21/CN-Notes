@@ -1,8 +1,35 @@
 ## 5.1 Routing Algorithms
 
-**Distance Vector Algorithm:** Each router maintains a table with distances to destinations, updating based on information exchanged with neighbors (e.g., RIP protocol).
+**Key Routing Algorithms**
 
-**Link State Algorithm:** Routers share comprehensive information about network link states to build a shortest path based on the complete network topology for efficient path calculations (e.g., OSPF protocol).
+### (A) **Distance Vector Routing (DVR)**
+
+* Each router knows the **distance (cost)** to reach all destinations.
+* Routers exchange info with **neighbors only**.
+* Uses **Bellman-Ford algorithm**.
+* Example protocol: **RIP (Routing Information Protocol)**.
+* Problem: **Count-to-infinity** (slow convergence when a link fails).
+
+
+
+### (B) **Link State Routing (LSR)**
+
+* Each router has a **full map of the network topology**.
+* Routers flood link-state info across the network.
+* Each router independently calculates shortest path using **Dijkstra’s algorithm**.
+* Example protocol: **OSPF (Open Shortest Path First)**.
+* Pros: Faster, loop-free, converges quickly.
+* Cons: Higher memory & CPU usage.
+
+
+
+### (C) **Path Vector Routing**
+
+* Used between **autonomous systems (AS)** in the Internet.
+* Each router advertises **complete path (AS sequence)**, not just cost.
+* Prevents routing loops across large networks.
+* Example protocol: **BGP (Border Gateway Protocol)**.
+*Link State Algorithm:** Routers share comprehensive information about network link states to build a shortest path based on the complete network topology for efficient path calculations (e.g., OSPF protocol).
 
 | Feature                        | Distance Vector Routing         | Link State Routing             |
 |--------------------------------|---------------------------------|--------------------------------|
