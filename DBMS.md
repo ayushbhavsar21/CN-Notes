@@ -127,6 +127,10 @@ It is used in database design to map real-world requirements into a structured d
 
 ---
 
+**Nessacary condition for a candidate key to be a primary key**
+> Any attribute of the Primary key can not contain a NULL value.
+  While in the Candidate key, any attribute can contain a NULL value.
+
 ## Integrity & Consistency
 
 - *Integrity* in DBMS is maintained using constraints like primary key, foreign key, domain rules, and business rules.  
@@ -391,6 +395,141 @@ Here, **Hobbies** and **Languages** are independent of each other but are stored
 * **3NF/BCNF** is usually enough for OLTP (transactional DBs).
 * **4NF/5NF** for advanced enterprise DBs with complex relationships.
 * **6NF** for data warehouses & temporal DBs.
+---
+### **📌 In normalization we break table to remove redundency , but how breaking table removes redundency ?**
+- "Normalization removes redundancy by decomposing a large table into smaller tables based on functional dependencies. This ensures that each fact is stored only once. Instead of repeating data (like student names or course names) across multiple rows, we store them in separate tables and use keys to establish relationships. This avoids anomalies and maintains data consistency."
+
+- **Eg**
+🔹 1. Start with the Problem (Redundancy)
+
+* In an unnormalized table, **the same information is repeated many times**.
+* Example:
+
+  ```
+  StudentID | StudentName | Course | Instructor
+  1         | Alice       | DBMS   | Prof. John
+  2         | Bob         | DBMS   | Prof. John
+  ```
+
+  Here, *“Prof. John”* is repeated for every student in DBMS.
+
+👉 Repetition = redundancy → wastes space, and causes **update anomalies** (if Prof. John changes phone number, we must update multiple rows).
+
+🔹 2. Explain the Solution (Breaking Tables)
+
+* By splitting into **separate tables**, we **store each fact only once**.
+* Example after normalization:
+
+**Student Table**
+
+```
+StudentID | StudentName
+1         | Alice
+2         | Bob
+```
+
+**Course Table**
+
+```
+Course | Instructor
+DBMS   | Prof. John
+```
+
+**Enrollment Table**
+
+```
+StudentID | Course
+1         | DBMS
+2         | DBMS
+```
+👉 Now *“Prof. John”* is stored **once**, linked through `Course`.
+
+🔹 3. Why This Removes Redundancy
+
+* Instead of repeating the same instructor name in every row, we keep it in **one place (Course table)**.
+* Any update is done once → **no anomalies** (Update, Insert, Delete).
+* Tables store **atomic, non-redundant facts**, and relationships are captured with **foreign keys**.
+  
+---
+
+## 📌 Functional Dependency (FD)
+
+### 🔹 **Definition**
+
+> *A functional dependency means one attribute uniquely determines another. For example, StudentID determines StudentName. They can be trivial, non-trivial, full, partial, transitive, or multivalued. Each type is important because they guide normalization steps — partial dependencies violate 2NF, transitive dependencies violate 3NF, and multivalued dependencies violate 4NF.*
+
+---
+
+A **functional dependency** exists when the value of one attribute (or a set of attributes) in a relation **uniquely determines** the value of another attribute.
+
+👉 Formally:
+If `X → Y`, then for every two rows in a table, if the values of **X** are the same, the values of **Y** must also be the same.
+
+**Example**:
+
+* In `Student(StudentID, Name, Department)`:
+
+  * `StudentID → Name` (StudentID uniquely determines Name).
+  * `Department → HOD` (Department uniquely determines Head of Department).
+---
+
+### 📌 Types of Functional Dependencies
+
+---
+
+#### 1️⃣ **Trivial Functional Dependency**
+
+* Dependency where the right-hand side is a subset of the left-hand side.
+* Example: `{StudentID, Name} → Name` (trivial because Name is already in LHS).
+---
+
+#### 2️⃣ **Non-Trivial Functional Dependency**
+
+* Dependency where RHS is **not** part of LHS.
+* Example: `StudentID → Name` (Name not in LHS).
+---
+
+#### 3️⃣ **Completely (Fully) Functional Dependency**
+
+* If `X → Y` and removing any attribute from X means dependency no longer holds.
+* Example: `(StudentID, CourseID) → Grade`
+
+  * Grade depends on both StudentID and CourseID (composite key).
+---
+
+#### 4️⃣ **Partial Functional Dependency**
+
+* If `X → Y` but Y depends on only part of a **composite key**.
+* Example: `(StudentID, CourseID) → StudentName`
+
+  * StudentName depends only on StudentID, not on CourseID.
+* ❌ Violates **2NF**.
+---
+
+#### 5️⃣ **Transitive Dependency**
+
+* When `X → Y` and `Y → Z`, then `X → Z` indirectly.
+* Example: `StudentID → Department` and `Department → HOD` ⇒ `StudentID → HOD`.
+* ❌ Violates **3NF**.
+---
+
+#### 6️⃣ **Multivalued Dependency (MVD)**
+
+* Special case where one attribute determines a **set of values** for another attribute, independent of other attributes.
+* Example: `Student → {Hobby, Language}` (a student can have multiple hobbies and multiple languages, independent).
+* ❌ Violates **4NF**.
+---
+
+### 📌 Summary Table
+
+| Type           | Definition                             | Example                    |
+| -------------- | -------------------------------------- | -------------------------- |
+| Trivial FD     | RHS ⊆ LHS                              | {ID, Name} → Name          |
+| Non-Trivial FD | RHS not in LHS                         | ID → Name                  |
+| Fully FD       | Whole composite key needed             | (ID, Course) → Grade       |
+| Partial FD     | Only part of composite key             | (ID, Course) → StudentName |
+| Transitive FD  | X → Y and Y → Z ⇒ X → Z                | ID → Dept, Dept → HOD      |
+| Multivalued FD | One attr → set of values independently | Student → Hobby            |
 
 ---
 
@@ -495,6 +634,52 @@ Example: In a **bank transfer**, deducting money from one account and adding it 
 * **Isolation** → via locks & concurrency control
 * **Durability** → via logs, checkpoints, and recovery mechanisms
 
+### Check Keyword
+> “`CHECK` is a declarative constraint that validates a Boolean rule on every row at write time (Insert or update ). It enforces domain and business rules like ranges, enums, and cross-column conditions, is cheaper and safer than triggers for row invariants, and works with `NOT NULL` and other constraints to keep the data valid.”
+
+**How it works**
+
+* If the predicate is `TRUE` the row is accepted.
+* If `FALSE` the statement fails.
+* If `UNKNOWN` due to `NULL`, most engines treat it as pass. Use `NOT NULL` to block `NULL`s.
+
+**Syntax**
+
+```sql
+-- column-level
+CREATE TABLE employee (
+  emp_id INT PRIMARY KEY,
+  salary NUMERIC(12,2) CHECK (salary >= 0),       -- domain rule
+  rating INT CHECK (rating BETWEEN 1 AND 5)       -- 1..5 inclusive
+);
+
+-- table-level (can use multiple columns)
+CREATE TABLE booking (
+  id INT PRIMARY KEY,
+  start_at TIMESTAMP NOT NULL,
+  end_at   TIMESTAMP,
+  CHECK (end_at IS NULL OR end_at >= start_at)    -- cross-column rule
+);
+
+-- named constraints
+CREATE TABLE order_hdr (
+  id INT PRIMARY KEY,
+  status TEXT NOT NULL,
+  paid_at TIMESTAMP,
+  CONSTRAINT chk_paid_when_status_paid
+    CHECK (status <> 'PAID' OR paid_at IS NOT NULL)
+);
+```
+**CONSTRAINT keyword (CONSTRAINT name) above is used so errors are readable and maintainable.**
+
+| Aspect          | **CONSTRAINT**                                                                                                                                                                                                       | **CHECK**                                                                                                    |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **Definition**  | A **keyword** used to define rules (integrity constraints) on a table. It is a **general mechanism** to apply different types of restrictions like `PRIMARY KEY`, `FOREIGN KEY`, `UNIQUE`, `CHECK`, `NOT NULL`, etc. | A **specific type of constraint** used to validate data against a **Boolean condition** (e.g., salary > 0).  |
+| **Scope**       | Umbrella term – covers **all constraints** (PK, FK, UNIQUE, CHECK, NOT NULL, DEFAULT).                                                                                                                               | Only enforces a **condition on values** in a column or across multiple columns.                              |
+| **Usage**       | Used when **defining any rule** on a table/column.                                                                                                                                                                   | Used when **validating data** against a logical expression.                                                  |
+| **Example**     | `sql CREATE TABLE Employee ( emp_id INT CONSTRAINT pk_emp PRIMARY KEY, emp_name VARCHAR(50) CONSTRAINT nn_name NOT NULL ); `                                                                                         | `sql CREATE TABLE Product ( product_id INT, price DECIMAL(10,2) CONSTRAINT chk_price CHECK (price >= 0) ); ` |
+| **Flexibility** | Can define multiple different constraint types.                                                                                                                                                                      | Only checks whether inserted/updated data satisfies the given condition.                                     |
+| **Purpose**     | To **enforce data integrity** at table/column level (structural + relational).                                                                                                                                       | To **restrict data values** using logical conditions.                                                        |
 
 ## 📌 **Indexing in DBMS**
 
@@ -598,6 +783,145 @@ Indexing is used to optimise the performance of a database by minimising the num
 * **Types** → Primary, Secondary, Clustered, Non-clustered, Dense, Sparse.
 * **Structures** → B-Tree, B+Tree, Hash.
 * **Trade-off** → Fast reads 🔄 Slower writes & extra space.
+* 
+---
+### 📌 **Types of Indexing in DBMS (with Examples)**
+
+###3 1️⃣ **Primary Index**
+
+* Automatically created on the **primary key**.
+* Table rows are stored in **sorted order** of the primary key.
+
+**Example**
+
+```sql
+CREATE TABLE Students (
+    StudentID INT PRIMARY KEY,
+    Name VARCHAR(50),
+    Dept VARCHAR(20)
+);
+```
+
+👉 Oracle/MySQL automatically creates a **primary index** on `StudentID`.
+
+---
+
+#### 2️⃣ **Secondary Index**
+
+* Created manually on a **non-primary column** to speed up queries.
+
+**Example**
+
+```sql
+CREATE INDEX idx_student_dept 
+ON Students(Dept);
+```
+
+👉 Useful if queries like `SELECT * FROM Students WHERE Dept = 'CSE';` are frequent.
+
+---
+
+#### 3️⃣ **Clustered Index**
+
+* Data rows are **physically stored** in the order of the index key.
+* Only **one clustered index per table** (because rows can be ordered in one way).
+
+**Example (SQL Server / MySQL InnoDB)**
+
+```sql
+CREATE CLUSTERED INDEX idx_student_name 
+ON Students(Name);
+```
+
+👉 Table rows will be physically ordered by `Name`.
+
+---
+
+#### 4️⃣ **Non-Clustered Index**
+
+* Stores a **separate index structure** with pointers to the data.
+* Multiple non-clustered indexes can exist on a table.
+
+**Example**
+
+```sql
+CREATE NONCLUSTERED INDEX idx_student_name 
+ON Students(Name);
+```
+
+👉 Index stores (Name + RowPointer), and pointer refers back to actual row.
+
+---
+
+#### 5️⃣ **Unique Index**
+
+* Ensures all values in the column are **unique**.
+* Created automatically on **PRIMARY KEY** and **UNIQUE** constraints.
+
+**Example**
+
+```sql
+CREATE UNIQUE INDEX idx_student_email 
+ON Students(Email);
+```
+
+👉 Guarantees no two students have the same Email.
+
+---
+
+#### 6️⃣ **Dense vs Sparse Index**
+
+* **Dense Index** → Every record has an entry.
+* **Sparse Index** → Only some records have entries (common with primary indexes).
+
+**Example**
+
+* **Dense**: Index has every student’s `StudentID`.
+* **Sparse**: Index only has first `StudentID` of each block/page.
+
+---
+
+#### 7️⃣ **B-Tree Index**
+
+* Default in most RDBMS (Oracle, MySQL, SQL Server).
+* Balanced tree → good for **range queries**.
+
+**Example**
+
+```sql
+CREATE INDEX idx_student_btree 
+ON Students(StudentID);
+```
+
+---
+
+#### 8️⃣ **Bitmap Index (Oracle-specific)**
+
+* Uses **bitmaps** instead of row pointers.
+* Best for **low-cardinality columns** (like Gender, Yes/No).
+
+**Example (Oracle)**
+
+```sql
+CREATE BITMAP INDEX idx_student_gender 
+ON Students(Gender);
+```
+
+---
+
+#### 9️⃣ **Hash Index**
+
+* Uses a **hash function** → great for equality search (`=`), not ranges.
+* Common in **NoSQL** and some RDBMS (like PostgreSQL).
+
+**Example (PostgreSQL)**
+
+```sql
+CREATE INDEX idx_student_hash 
+ON Students USING HASH(StudentID);
+```
+
+---
 
 
 ## 📌 **NoSQL Databases**
@@ -906,4 +1230,441 @@ Proposed by **Eric Brewer**, CAP theorem states that in a **distributed database
 * **Use case**: Social media, shopping carts, recommendation systems (stale data is tolerable).
 ---
 
+## View (Virtual Table)
+  A **View** in DBMS is a **virtual table** based on the result of an SQL query. It does not store data itself but displays data stored in one or more base tables.
 
+---
+
+### 🔹 **Key Points (Interview Version)**
+
+1. **Definition** – A view is a stored query that acts like a table. It shows data dynamically from underlying tables.
+2. **Storage** – Only the query definition is stored, not the actual data (unless it is a materialized view).
+3. **Types of Views**
+
+   * **Simple View** → Based on a single table, no functions or group of data.
+   * **Complex View** → Based on multiple tables, may contain joins, aggregations.
+   * **Materialized View** → Stores actual data physically for faster access, needs refresh.
+4. **Advantages**
+
+   * Data security → Restrict access to specific columns/rows.
+   * Simplifies complex queries → Users query the view instead of writing long SQL.
+   * Logical independence → Underlying schema can change, but the view hides complexity.
+5. **Limitations**
+
+   * Some views are not updatable (especially those with joins, GROUP BY).
+   * Performance overhead since query runs every time (except materialized views).
+
+---
+
+### 🔹 **Example**
+
+```sql
+-- Simple view showing only selected columns
+CREATE VIEW Employee_View AS
+SELECT emp_id, name, department
+FROM Employees
+WHERE department = 'IT';
+
+-- Using the view
+SELECT * FROM Employee_View;
+```
+
+This shows only IT employees without exposing the full `Employees` table.
+
+---
+
+## 📌 **Partitioning vs Sharding in DBMS**
+
+---
+
+### 🔹 1. Partitioning
+
+**Definition**
+Partitioning = **splitting a large table (or index) into smaller pieces (partitions)** within the **same database/server**.
+
+* Logically: still one table.
+* Physically: stored as multiple segments.
+
+**Types of Partitioning**
+
+* **Horizontal partitioning** → split rows (e.g., Orders by year).
+* **Vertical partitioning** → split columns (e.g., Customer info vs Contact info).
+* **Range / List / Hash / Composite partitioning**.
+
+**Example**
+Orders table split by year:
+
+* Partition 1 → Orders\_2022
+* Partition 2 → Orders\_2023
+
+👉 Goal: **Performance optimization & manageability**.
+
+---
+
+### 🔹 2. Sharding
+
+**Definition**
+Sharding = **distributing partitions across multiple servers/nodes (databases)**.
+
+* Each shard = an independent database with its own subset of data.
+* Together, shards form the complete dataset.
+* Common in distributed systems & NoSQL DBs (MongoDB, Cassandra, DynamoDB).
+
+**Example**
+Users table split by region:
+
+* Shard 1 → Users from Asia
+* Shard 2 → Users from Europe
+* Shard 3 → Users from America
+
+👉 Goal: **Horizontal scalability & high availability**.
+
+---
+
+### 🔹 3. Key Differences
+
+| Feature        | Partitioning                                               | Sharding                                                       |
+| -------------- | ---------------------------------------------------------- | -------------------------------------------------------------- |
+| **Definition** | Splitting data within a single database instance           | Splitting data across multiple databases/servers               |
+| **Level**      | **Database-internal** (DB engine manages it)               | **Application/distribution-level** (app or middleware decides) |
+| **Management** | Centralized (one DB server)                                | Decentralized (many DB servers)                                |
+| **Use Case**   | Performance optimization, easier query execution, archival | Scalability across machines, very large datasets, global apps  |
+| **Example**    | Oracle/PostgreSQL Partitioned Tables                       | MongoDB/DynamoDB Shards                                        |
+
+---
+
+### 🔹 4. In Simple Words
+
+* **Partitioning**: Cutting a big pizza into slices 🍕 (all slices still on one plate).
+* **Sharding**: Putting slices on **different plates (servers)** and distributing them to people.
+
+---
+
+### ✅ **Interview-ready Answer**
+
+> *“Partitioning splits a large table into smaller parts within the same database for performance and manageability, while sharding distributes those partitions across multiple servers for horizontal scalability. Partitioning is DB-internal, sharding is cross-server. For example, partitioning orders by year in one Oracle DB is partitioning, but storing customers by region on separate servers is sharding.”*
+
+---
+## Types of Decomposition
+In **DBMS normalization**, decomposition means breaking a relation (table) into two or more relations.
+
+### 🔹 **1. Lossless-Join Decomposition**
+
+* The decomposed tables can be **joined back to get the original table without losing information**.
+* Ensures no spurious tuples appear when relations are joined.
+* **Condition:** Common attributes between decomposed relations must form a **key** in at least one relation.
+* **Example:**
+
+  ```
+  R(A, B, C)
+  Decompose into R1(A, B), R2(A, C)
+  ```
+
+  Here, `A` is a key → lossless.
+
+---
+
+### 🔹 **2. Lossy (Lossy-Join) Decomposition**
+
+* When decomposition **loses some information** or produces **extra tuples** after joining.
+* Not desirable in practice.
+* **Example:**
+
+  ```
+  R(A, B, C)
+  Decompose into R1(A, B), R2(B, C)
+  ```
+
+  If `B` is not a key → join may produce wrong results.
+
+---
+
+### 🔹 **3. Dependency-Preserving Decomposition**
+
+* Ensures that all functional dependencies from the original relation are still enforceable after decomposition.
+* Important for maintaining data integrity without needing costly joins.
+* **Note:** A decomposition can be lossless but not dependency-preserving, or dependency-preserving but not lossless. Ideally, we want both.
+
+
+
+✅ Example 1 – Dependency Preserved
+```
+R(A, B, C)
+FDs: A → B, B → C
+```
+We decompose `R` into:
+
+* `R1(A, B)`
+* `R2(B, C)`
+
+* In `R1`: A → B is preserved.
+* In `R2`: B → C is preserved.
+
+👉 Both dependencies are preserved **without joining** → This is **dependency-preserving decomposition**.
+
+---
+
+ ❌ Example 2 – Not Dependency Preserving
+```
+R(A, B, C)
+FDs: A → B, B → C, A → C
+```
+
+Decompose into:
+
+* `R1(A, B)`
+* `R2(B, C)`
+
+Now check FDs:
+
+* `A → B` (preserved in R1 ✅)
+* `B → C` (preserved in R2 ✅)
+* `A → C` ❌ not present in either R1 or R2.
+
+  * To check `A → C`, we’d need to join `R1` and `R2`.
+
+👉 This decomposition is **lossless** (if `B` is a key in `R2`), but **not dependency-preserving**.
+
+---
+
+## 📌 Schedule 
+
+> *“A schedule in DBMS is the sequence of operations from multiple transactions arranged by the system. It is needed to control concurrency, maintain consistency, and avoid problems like lost updates or dirty reads. By analyzing schedules, the DBMS ensures transactions follow a safe order and the outcome is equivalent to serial execution.”*
+
+### 🔹 Definition
+
+* A **schedule** is an **order (sequence) of operations** from one or more transactions arranged by the DBMS.
+* Operations usually include:
+
+  * **Read (R)**
+  * **Write (W)**
+  * **Commit (C)**
+  * **Abort (A)**
+
+👉 It tells us *how multiple transactions are executed together*.
+
+
+---
+
+### 📌 **Why is a Schedule Needed?**
+
+#### 🔹 1. Concurrency Control
+
+* In a multi-user system, **many transactions run at the same time**.
+* If they all directly accessed data, it could lead to **conflicts and anomalies** (lost updates, dirty reads, uncommitted data).
+* A **schedule defines the order** of execution, so DBMS can **detect and prevent conflicts**.
+
+---
+
+#### 🔹 2. Serializability
+
+* The DBMS must ensure that a concurrent schedule is **equivalent to some serial execution** (one transaction after another).
+* This ensures **consistency** and preserves **ACID properties**.
+
+---
+
+#### 🔹 3. Avoiding Anomalies
+
+Without proper scheduling:
+
+* **Lost Update** → Two transactions overwrite each other’s changes.
+* **Dirty Read** → A transaction reads uncommitted data from another.
+* **Inconsistent Read** → One transaction sees partial updates from another.
+
+Schedules help DBMS **decide the safe order** to avoid these.
+
+---
+
+
+### **Serial Schedule**
+
+   * Transactions execute one after another, no interleaving.
+   * Always consistent, but poor concurrency.
+
+### **Concurrent / Non-Serial Schedule**
+
+   * Operations interleaved.
+   * Needs concurrency control to avoid anomalies.
+
+---
+## **Types of schedules** by two ways:
+
+1. **Correctness (Serializability)**
+2. **Failure safety (Recoverability)**
+---
+
+### 1) On the basis of **Serializability**
+
+#### A. Conflict-serializable (CSR)
+
+**Idea:** The interleaved schedule is equivalent to some serial order after swapping only **non-conflicting** operations.
+
+* **Conflicting pairs (same item, different txns):** `R–W`, `W–R`, `W–W`. (`R–R` never conflicts.)
+* **Test (easy, exam favorite):** Build a **precedence graph**
+
+  * Nodes = transactions, edge `Ti → Tj` if an op of `Ti` precedes and conflicts with one of `Tj`.
+  * **Acyclic ⇒ conflict-serializable.** The topological order gives the equivalent serial order.
+* **Why we like it:** Fast to check; most concurrency control (e.g., **Strict 2PL**) guarantees CSR.
+
+**Mini example (CSR):**
+`R1(X)  R2(X)  W1(X)  R2(Y)  W2(Y)  C1  C2` → graph has no cycle ⇒ equivalent to serial `T1 → T2`.
+
+---
+
+#### B. View-serializable (VSR)
+
+**Idea:** Equivalent to some serial order if three **view conditions** match:
+
+1. **Reads of initial values**: same txns read the “initial” value of each item.
+2. **Reads-from**: if `Ti` reads a value written by `Tj` in one schedule, it must do so in the other.
+3. **Final writer** of each item is the same.
+
+* **Stronger vs. CSR?** **VSR ⊃ CSR** (there are VSR schedules that are **not** CSR).
+* **Why not always used?** Testing VSR is computationally hard (classic result), so DBs target CSR.
+
+**Classic VSR-but-not-CSR example (uses a “blind write”):**
+`W1(X);  W2(X);  W1(X)`
+Precedence graph has a cycle (`T1→T2` from the first two writes, `T2→T1` from `W2(X)` before the last `W1(X)`), so **not CSR**.
+But it’s **view-equivalent** to serial `T2 → T1` (no reads; final writer is `T1` in both).
+
+---
+
+### 2) On the basis of **Recoverability**
+
+Think “what happens if someone aborts?”
+
+#### A. Recoverable
+
+**Rule:** If `Ti` **reads** a value written by `Tj`, then **`Ti` must commit only after `Tj` commits**.
+
+* Prevents committing based on data that might later be rolled back.
+
+**Non-recoverable counterexample:**
+`W1(X);  R2(X);  C2;  A1` → `T2` committed a value that `T1` later aborted ⇒ **unsafe**.
+
+---
+
+#### B. Cascadeless
+
+**Rule:** A transaction **never reads uncommitted data** (no “dirty reads”).
+
+* If `Ti` reads from `Tj`, then **`Tj` must have committed before that read**.
+* Eliminates **cascading aborts** (where many dependents must abort because one writer aborts).
+* **All cascadeless schedules are recoverable** (but not conversely).
+
+**Cascadeless but not strict example (has a dirty write):**
+`W1(X);  W2(X);  C1;  C2`
+No one **reads** uncommitted data ⇒ cascadeless. But `T2` overwrote `X` while `T1` was uncommitted ⇒ **not strict**.
+
+---
+
+#### C. Strict
+
+**Rule:** If `Ti` writes `X`, **no other txn may read or write `X` until `Ti` commits/aborts**.
+
+* Forbids **dirty reads** *and* **dirty writes**.
+* Easiest to recover: if `Ti` aborts, no one has seen or overwritten its uncommitted data.
+* **Strict ⇒ Cascadeless ⇒ Recoverable** (proper subset chain).
+
+**Typical way to get Strict:** **Strict 2-Phase Locking (S2PL)**—hold write locks till commit.
+
+**Strict example:**
+`W1(X);  C1;  R2(X);  W2(X);  C2`
+`T2` touches `X` only after `T1` commits.
+
+---
+
+## The two families together (how they relate)
+
+* **Serializability** = logical **correctness under concurrency**.
+* **Recoverability** = **safety under failures/aborts**.
+
+They’re orthogonal—but in practice many protocols give you both:
+
+* **Strict 2PL** ⇒ **Conflict-serializable** **and** **Strict** (hence cascadeless & recoverable).
+* **MVCC** systems (e.g., Read Committed/Serializable) avoid dirty reads; with proper write rules they provide cascadeless or strict behavior while ensuring serializability at chosen isolation levels.
+
+---
+##**Concurrency Control in DBMS**
+
+> Concurrency control is the mechanism to ensure correct and consistent execution of multiple transactions running **concurrently**.
+
+>Concurrency control = **set of protocols** that ensure safe, consistent, and efficient concurrent transaction execution by enforcing **serializability** and **recoverability**.
+
+---
+
+### 🔹 Why Concurrency Control?
+
+* In a multi-user DBMS, many transactions run in parallel.
+* Without control, problems like:
+
+  1. **Lost Update** → Two transactions overwrite each other’s changes.
+  2. **Dirty Read** → A transaction reads uncommitted data from another.
+  3. **Unrepeatable Read** → A value read twice gives different results because another transaction modified it in between.
+  4. **Phantom Read** → A re-executed query returns different results because another transaction inserted/deleted rows.
+
+---
+
+### 🔹 Goals
+
+* Maintain **Isolation** (ACID property).
+* Ensure **Serializability** of schedules.
+* Avoid anomalies like cascading rollbacks.
+* Maximize throughput and resource utilization.
+
+---
+
+### 🔹 Concurrency Control Techniques
+
+#### 1. **Lock-based Protocols**
+
+Transactions acquire locks before accessing data.
+
+* **Binary Locks**: Lock = 0 (unlocked), 1 (locked).
+* **Shared/Exclusive Locks (S/X locks)**:
+
+  * Shared lock → multiple reads allowed.
+  * Exclusive lock → only one writer.
+* **Two-Phase Locking (2PL)**:
+
+  * Growing phase: acquire locks.
+  * Shrinking phase: release locks.
+  * Guarantees conflict-serializability.
+* **Strict 2PL**: Keeps write locks till commit → avoids cascading aborts.
+
+---
+
+#### 2. **Timestamp-based Protocols**
+
+Each transaction gets a **timestamp**. Ordering of operations is based on timestamps.
+
+* Ensures serializability by always executing as if transactions are in timestamp order.
+* Uses **Read Timestamp (RTS)** and **Write Timestamp (WTS)** for each data item.
+
+---
+
+#### 3. **Validation-based Protocols (Optimistic Concurrency Control)**
+
+* Assumes conflicts are rare.
+* Execution divided into 3 phases:
+
+  1. **Read Phase**: Transaction reads and stores updates locally.
+  2. **Validation Phase**: Check if transaction conflicts with others.
+  3. **Write Phase**: If valid, apply changes to DB.
+* Works well in read-heavy workloads.
+
+---
+
+#### 4. **Multiversion Concurrency Control (MVCC)**
+
+* Keeps multiple versions of data items.
+* Readers access old versions without blocking writers.
+* Used in PostgreSQL, Oracle, etc.
+
+---
+## 🔹 Concurrency Control and Schedule Types
+
+* Ensures schedules are **serializable** (conflict/view).
+* Ensures schedules are **recoverable** (recoverable, cascadeless, strict).
+
+---
